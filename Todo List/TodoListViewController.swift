@@ -13,8 +13,14 @@ class TodoListViewController: UITableViewController {
 
     var itemArray = ["buy milk","buy Eggos", "Destory Demagorgon"]
     
+    let defaults = UserDefaults.standard //varibale that can save data even user terminate our app
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        if let item = defaults.array(forKey: "TodoListArray") as? [String] { //get from our saving box
+            itemArray = item
+        }
         
     }
     
@@ -66,6 +72,8 @@ class TodoListViewController: UITableViewController {
             
             //self.itemArray.append(textField.text ?? "new item")
             self.itemArray.append(textField.text!)
+            
+            self.defaults.set(self.itemArray, forKey: "TodoListArray") //add itemArray to our saving box
             
             self.tableView.reloadData() //refresh the table view
         }
