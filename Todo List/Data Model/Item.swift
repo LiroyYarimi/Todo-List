@@ -8,8 +8,8 @@
 
 import Foundation
 
-class Item{
+class Item : Codable {// Encodable, Decodable{ //for save and load
     
-    var title = ""
-    var done = false
+    var title : String = ""
+    var done : Bool = false
 }

@@ -13,22 +13,15 @@ class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
     
-    let defaults = UserDefaults.standard //varibale that can save data even user terminate our app
+    //Create new plist named Item and there we will save our data
+    //we can't use UserDefault becuase you can't save there object of type Item class
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let newItem1 = Item()
-        newItem1.title = "buy milk"
-        itemArray.append(newItem1)
-        
-        let newItem2 = Item()
-        newItem2.title = "buy Eggos"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Item()
-        newItem3.title = "Destory Demagorgon"
-        itemArray.append(newItem3)
+        loadItem()
 
 //        if let item = defaults.array(forKey: "TodoListArray") as? [Item] { //get from our saving box
 //            itemArray = item
@@ -66,7 +59,7 @@ class TodoListViewController: UITableViewController {
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        tableView.reloadData()//call the method cellForRowAt
+        saveItem()// refresh Item.plist with our change
         
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -89,9 +82,8 @@ class TodoListViewController: UITableViewController {
             //self.itemArray.append(textField.text ?? "new item")
             self.itemArray.append(newItem)
             
-            self.defaults.set(self.itemArray, forKey: "TodoListArray") //add itemArray to our saving box
+            self.saveItem()
             
-            self.tableView.reloadData() //refresh the table view
         }
         
         alert.addTextField { (alertTextField) in //this closure call when the pop up message display
@@ -101,6 +93,34 @@ class TodoListViewController: UITableViewController {
         
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
+    }
+    
+    //MARK: - Model Manipulation Methods
+    
+    func saveItem(){
+        //save itemArray (with the newItem) in our Item.plist
+        let encoder = PropertyListEncoder()
+        do{
+            let data = try encoder.encode(itemArray)
+            try data.write( to: dataFilePath!) //the address to our plist
+        }
+        catch{
+            print("error encoding item array: \(error)")
+        }
+        self.tableView.reloadData() //call the method cellForRowAt - refresh the table view
+    }
+    
+    func loadItem(){
+        
+        if let data = try? Data(contentsOf: dataFilePath!){
+            let decoder = PropertyListDecoder()
+            do{
+                itemArray = try decoder.decode([Item].self , from: data)
+            }
+            catch{
+                print("Error decoding item array : \(error)")
+            }
+        }
     }
 }
 
