@@ -7,25 +7,20 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
 // we don't need to declare a delegate like the group chat project because it's UITableViewController
 
     var itemArray = [Item]()
     
-    //Create new plist named Item and there we will save our data
-    //we can't use UserDefault becuase you can't save there object of type Item class
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
-    
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        
         loadItem()
-
-//        if let item = defaults.array(forKey: "TodoListArray") as? [Item] { //get from our saving box
-//            itemArray = item
-//        }
         
     }
     
@@ -55,7 +50,11 @@ class TodoListViewController: UITableViewController {
     
     //this func call automatic when user pressed on cell in our table view
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        //print(itemArray[indexPath.row])
+        /*
+         how to delete
+         context.delete(itemArray[indexPath.row])
+         itemArray.remove(at: indexPath.row)
+         */
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
@@ -76,9 +75,11 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //what will happen once the user clicks the add item button on our UIAlert
             
-            let newItem = Item()
-            newItem.title = textField.text!
             
+            
+            let newItem = Item(context: self.context)
+            newItem.title = textField.text!
+            newItem.done = false
             //self.itemArray.append(textField.text ?? "new item")
             self.itemArray.append(newItem)
             
@@ -98,28 +99,59 @@ class TodoListViewController: UITableViewController {
     //MARK: - Model Manipulation Methods
     
     func saveItem(){
-        //save itemArray (with the newItem) in our Item.plist
-        let encoder = PropertyListEncoder()
+        
         do{
-            let data = try encoder.encode(itemArray)
-            try data.write( to: dataFilePath!) //the address to our plist
-        }
-        catch{
-            print("error encoding item array: \(error)")
+            try context.save()
+        }catch{
+            print("Error saving context \(error)")
         }
         self.tableView.reloadData() //call the method cellForRowAt - refresh the table view
     }
     
-    func loadItem(){
+    //request use in the method. with use to call this function
+    //request have default value "Item.fetchRequest()"
+    func loadItem(with request : NSFetchRequest<Item> = Item.fetchRequest()){
+
+        do{
+            itemArray = try context.fetch(request)
+        }catch{
+            print("Error fetch data from context \(error)")
+        }
         
-        if let data = try? Data(contentsOf: dataFilePath!){
-            let decoder = PropertyListDecoder()
-            do{
-                itemArray = try decoder.decode([Item].self , from: data)
+        tableView.reloadData()
+    }
+    
+}
+
+//MARK: - Search bar methods
+
+//extension our TodoListViewController for the search bar with all the methods inside.
+extension TodoListViewController : UISearchBarDelegate{
+    //we order the searchbar.Delegte = salf, in out Main.storyboard
+    
+    //tel the delegate (us) that the search bar is clicked
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        //search in the title string that contains the search words
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)] //order the result alphabetically
+        
+        loadItem(with: request)
+    }
+    
+    //tel the delegate (us) that the user is typing
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        
+        if searchBar.text?.count == 0 {//number of character is zero
+            loadItem()
+            
+            DispatchQueue.main.async { //make this task (dismiss the keyboard) work on the background so isn't freeze the app
+                searchBar.resignFirstResponder()//dismiss the keyboard
             }
-            catch{
-                print("Error decoding item array : \(error)")
-            }
+            
         }
     }
 }
